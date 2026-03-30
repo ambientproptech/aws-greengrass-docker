@@ -8,6 +8,29 @@ set -e
 #Disable job control so that all child processes run in the same process group as the parent
 set +m
 
+if command -v java >/dev/null 2>&1; then
+	_j=$(command -v java)
+	_j=$(readlink -f "$_j" 2>/dev/null || echo "$_j")
+	JAVA_HOME=$(dirname "$(dirname "$_j")")
+	export JAVA_HOME
+	PATH="${JAVA_HOME}/bin:${PATH}"
+	export PATH
+fi
+
+if command -v findmnt >/dev/null 2>&1; then
+	if findmnt -n /tmp 2>/dev/null | grep -q noexec; then
+		echo "ERROR: /tmp must be mounted with exec permissions (not noexec). AWS IoT Greengrass requirement."
+		exit 1
+	fi
+fi
+
+if [ -n "$(df -Pk / 2>/dev/null | awk 'NR==2 {print $4}')" ]; then
+	avail_kb=$(df -Pk / | awk 'NR==2 {print $4}')
+	if [ -n "$avail_kb" ] && [ "$avail_kb" -lt 262144 ] 2>/dev/null; then
+		echo "WARNING: Less than 256 MiB free on /. AWS IoT Greengrass requires at least 256 MiB for Core software (excluding components)."
+	fi
+fi
+
 # Path that initial installation files are copied to
 INIT_JAR_PATH=/opt/greengrassv2
 #Default options
@@ -18,7 +41,7 @@ parse_options() {
 	# If provision is true
 	if [ ${PROVISION} = "true" ]; then
 
-		if [ ! -f "/root/.aws/credentials" ] && ([[ -z "${AWS_ACCESS_KEY_ID}" ]] || [[ -z "${AWS_SECRET_ACCESS_KEY}" ]]); then
+		if [ ! -f "/root/.aws/credentials" ] && { [ -z "${AWS_ACCESS_KEY_ID}" ] || [ -z "${AWS_SECRET_ACCESS_KEY}" ]; }; then
 			echo "Provision is set to true, but credentials not found, neither file exist at /root/.aws/credentials nor set in environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, [AWS_SESSION_TOKEN]) . Please attach credentials and retry."
 			exit 1
 		fi
