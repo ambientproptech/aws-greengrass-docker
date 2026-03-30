@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - Dockerfile
+      - Dockerfile.release
       - greengrass-entrypoint.sh
       - .github/workflows/publish-docker.yml
 
@@ -33,7 +34,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Docker metadata
+      - name: Docker metadata (base)
+        id: metabase
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=base
+            type=sha,prefix=base-
+
+      - name: Build and push base image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.metabase.outputs.tags }}
+          labels: ${{ steps.metabase.outputs.labels }}
+
+      - name: Docker metadata (release)
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -42,10 +61,13 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=
 
-      - name: Build and push
+      - name: Build and push release image
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: Dockerfile.release
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BASE_IMAGE=${{ env.IMAGE_NAME }}:base
