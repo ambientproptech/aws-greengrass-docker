@@ -17,11 +17,19 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      PLATFORMS: linux/amd64,linux/arm64
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Set image name (GHCR requires lowercase)
         run: |
@@ -48,6 +56,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
+          platforms: ${{ env.PLATFORMS }}
           push: true
           tags: ${{ steps.metabase.outputs.tags }}
           labels: ${{ steps.metabase.outputs.labels }}
@@ -66,6 +75,7 @@ jobs:
         with:
           context: .
           file: Dockerfile.release
+          platforms: ${{ env.PLATFORMS }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
