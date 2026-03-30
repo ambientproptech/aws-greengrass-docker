@@ -49,3 +49,22 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Set GHCR package visibility to public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PKG=$(echo '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]')
+          OWNER='${{ github.repository_owner }}'
+          if [ "${{ github.event.repository.owner.type }}" = "Organization" ]; then
+            gh api --method PATCH \
+              -H "Accept: application/vnd.github+json" \
+              "/orgs/${OWNER}/packages/container/${PKG}" \
+              -f visibility=public
+          else
+            gh api --method PATCH \
+              -H "Accept: application/vnd.github+json" \
+              "/user/packages/container/${PKG}" \
+              -f visibility=public
+          fi
