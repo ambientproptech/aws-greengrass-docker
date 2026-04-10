@@ -86,4 +86,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            BASE_IMAGE=${{ secrets.IMAGE_NAME }}:base
+            BASE_IMAGE=${{ secrets.CONTAINER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:base
