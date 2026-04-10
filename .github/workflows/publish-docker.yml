@@ -52,6 +52,8 @@ jobs:
           tags: |
             type=raw,value=base
             type=sha,prefix=base-
+          cache-from: type=gha,scope=greengrass-base
+          cache-to: type=gha,mode=max,scope=greengrass-base
 
       - name: Build and push base image
         uses: docker/build-push-action@v6
@@ -71,6 +73,8 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=
+          cache-from: type=gha,scope=greengrass-release
+          cache-to: type=gha,mode=max,scope=greengrass-release
 
       - name: Build and push release image
         uses: docker/build-push-action@v6
