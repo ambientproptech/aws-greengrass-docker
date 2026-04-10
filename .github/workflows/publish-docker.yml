@@ -52,8 +52,6 @@ jobs:
           tags: |
             type=raw,value=base
             type=sha,prefix=base-
-          cache-from: type=gha,scope=greengrass-base
-          cache-to: type=gha,mode=max,scope=greengrass-base
 
       - name: Build and push base image
         uses: docker/build-push-action@v6
@@ -64,6 +62,8 @@ jobs:
           push: true
           tags: ${{ steps.metabase.outputs.tags }}
           labels: ${{ steps.metabase.outputs.labels }}
+          cache-from: type=gha,scope=greengrass-base
+          cache-to: type=gha,mode=max,scope=greengrass-base
 
       - name: Docker metadata (release)
         id: meta
@@ -73,8 +73,6 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=
-          cache-from: type=gha,scope=greengrass-release
-          cache-to: type=gha,mode=max,scope=greengrass-release
 
       - name: Build and push release image
         uses: docker/build-push-action@v6
@@ -87,3 +85,5 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             BASE_IMAGE=${{ secrets.CONTAINER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:base
+          cache-from: type=gha,scope=greengrass-release
+          cache-to: type=gha,mode=max,scope=greengrass-release
