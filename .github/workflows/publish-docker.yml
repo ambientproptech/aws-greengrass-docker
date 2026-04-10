@@ -42,7 +42,7 @@ jobs:
 
       - name: Set image name
         run: |
-          echo "IMAGE_NAME=${{ vars.CONTAINER_REGISTRY }}/${{ vars.IMAGE_NAME }}"
+          echo "IMAGE_NAME=${{ secrets.CONTAINER_REGISTRY }}/${{ secrets.IMAGE_NAME }}"
 
       - name: Docker metadata (base)
         id: metabase
@@ -58,7 +58,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          platforms: ${{ vars.PLATFORMS }}
+          platforms: ${{ secrets.PLATFORMS }}
           push: true
           tags: ${{ steps.metabase.outputs.tags }}
           labels: ${{ steps.metabase.outputs.labels }}
@@ -77,9 +77,9 @@ jobs:
         with:
           context: .
           file: Dockerfile.release
-          platforms: ${{ vars.PLATFORMS }}
+          platforms: ${{ secrets.PLATFORMS }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            BASE_IMAGE=${{ vars.IMAGE_NAME }}:base
+            BASE_IMAGE=${{ secrets.IMAGE_NAME }}:base
