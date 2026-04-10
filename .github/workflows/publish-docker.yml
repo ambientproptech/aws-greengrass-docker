@@ -42,7 +42,7 @@ jobs:
 
       - name: Set image name
         run: |
-          echo "IMAGE_NAME=${{ secrets.CONTAINER_REGISTRY }}/${{ secrets.IMAGE_NAME }}"
+          echo "IMAGE_NAME=${{ secrets.CONTAINER_REGISTRY }}/${{ secrets.IMAGE_NAME }}" >> $GITHUB_ENV
 
       - name: Docker metadata (base)
         id: metabase
