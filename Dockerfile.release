@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: MIT-0
 
 ARG BASE_IMAGE=greengrass-base:local
-FROM ${BASE_IMAGE}
+
+# --- Builder: compile native extensions, install pip packages ---
+FROM ${BASE_IMAGE} AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -19,5 +21,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get autoremove -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# --- Final: only the pip-installed packages are carried forward ---
+FROM ${BASE_IMAGE}
+
+COPY --from=builder /usr/local/lib/python3.11/dist-packages /usr/local/lib/python3.11/dist-packages
 
 LABEL org.opencontainers.image.description="Greengrass release image (extends Dockerfile base)"

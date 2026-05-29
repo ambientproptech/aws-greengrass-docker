@@ -1,11 +1,26 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 
-FROM debian:bookworm-slim
+# --- Download stage: fetch and extract Greengrass (tools discarded after) ---
+FROM debian:bookworm-slim AS downloader
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    wget \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
 
 ARG GREENGRASS_RELEASE_VERSION=latest
 ARG GREENGRASS_ZIP_FILE=greengrass-${GREENGRASS_RELEASE_VERSION}.zip
 ARG GREENGRASS_RELEASE_URI=https://d2s8p88vqu9w66.cloudfront.net/releases/${GREENGRASS_ZIP_FILE}
+
+RUN wget -q "$GREENGRASS_RELEASE_URI" -O "/tmp/${GREENGRASS_ZIP_FILE}" \
+    && mkdir -p /opt/greengrassv2 \
+    && unzip -q "/tmp/${GREENGRASS_ZIP_FILE}" -d /opt/greengrassv2 \
+    && rm -f "/tmp/${GREENGRASS_ZIP_FILE}"
+
+# --- Runtime stage: minimal image for running Greengrass ---
+FROM debian:bookworm-slim
 
 LABEL maintainer="AWS IoT Greengrass"
 LABEL greengrass-version=${GREENGRASS_RELEASE_VERSION}
@@ -31,19 +46,12 @@ ENV TINI_KILL_PROCESS_GROUP=1 \
     TRUSTED_PLUGIN=default_trusted_plugin_path \
     THING_POLICY_NAME=default_thing_policy_name
 
-COPY "greengrass-entrypoint.sh" /
-
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
-    curl \
-    wget \
-    unzip \
-    tar \
     sudo \
     procps \
     passwd \
     python3 \
-    python3-pip \
     openjdk-17-jre-headless \
     awscli \
     coreutils \
@@ -52,19 +60,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     debianutils \
     mount \
+    tar \
     && rm -rf /var/lib/apt/lists/* \
     && dpkg-query -W libc6 \
     && dpkg --compare-versions "$(dpkg-query -W -f '${Version}' libc6)" ge 2.25 \
     && test -x "$(command -v java)" \
-    && for c in ps sudo sh kill cp chmod rm ln id uname grep mkfifo aws findmnt useradd groupadd usermod echo; do command -v "$c" >/dev/null || exit 1; done \
-    && wget -q "$GREENGRASS_RELEASE_URI" -O "$GREENGRASS_ZIP_FILE" \
-    && chmod +x /greengrass-entrypoint.sh \
-    && mkdir -p /opt/greengrassv2 "$GGC_ROOT_PATH" \
-    && unzip -q "$GREENGRASS_ZIP_FILE" -d /opt/greengrassv2 \
-    && rm -f "$GREENGRASS_ZIP_FILE"
+    && for c in ps sudo sh kill cp chmod rm ln id uname grep mkfifo aws findmnt useradd groupadd usermod echo; do command -v "$c" >/dev/null || exit 1; done
+
+COPY --from=downloader /opt/greengrassv2 /opt/greengrassv2
+
+RUN mkdir -p "${GGC_ROOT_PATH}"
+
+COPY "greengrass-entrypoint.sh" /
+RUN chmod +x /greengrass-entrypoint.sh
 
 COPY "modify-sudoers.sh" /
-RUN chmod +x /modify-sudoers.sh
-RUN ./modify-sudoers.sh
+RUN chmod +x /modify-sudoers.sh && ./modify-sudoers.sh && rm -f /modify-sudoers.sh
 
 ENTRYPOINT ["/greengrass-entrypoint.sh"]
