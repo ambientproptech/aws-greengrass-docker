@@ -1,0 +1,7 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+ARG BASE_IMAGE=greengrass-base:local
+FROM ${BASE_IMAGE}
+
+LABEL org.opencontainers.image.description="Greengrass lite image (base only, no IoT SDK stack)"
