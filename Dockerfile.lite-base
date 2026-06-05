@@ -1,0 +1,117 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+#
+# Greengrass Nucleus Lite base: compile aws-greengrass-lite from source.
+# https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-nucleus-lite-component.html
+
+FROM debian:bookworm-slim AS builder
+
+ARG NUCLEUS_LITE_VERSION=v2.4.0
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    cmake \
+    git \
+    curl \
+    libssl-dev \
+    libcurl4-openssl-dev \
+    uuid-dev \
+    libzip-dev \
+    libsqlite3-dev \
+    libyaml-dev \
+    libsystemd-dev \
+    libevent-dev \
+    liburiparser-dev \
+    cgroup-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+RUN git clone --depth 1 --branch "${NUCLEUS_LITE_VERSION}" \
+    https://github.com/aws-greengrass/aws-greengrass-lite.git .
+
+RUN cmake -B build \
+    -DCMAKE_BUILD_TYPE=MinSizeRel \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DGGL_SYSTEMD_SYSTEM_USER=ggcore \
+    -DGGL_SYSTEMD_SYSTEM_GROUP=ggcore \
+    -DGGL_SYSTEMD_SYSTEM_DIR=/lib/systemd/system
+
+RUN make -C build -j"$(nproc)" && make -C build install
+
+FROM debian:bookworm-slim
+
+ARG NUCLEUS_LITE_VERSION=v2.4.0
+ENV DEBIAN_FRONTEND=noninteractive
+
+LABEL maintainer="AWS IoT Greengrass"
+LABEL gg.nucleus.runtime="lite"
+LABEL greengrass-nucleus-lite-version=${NUCLEUS_LITE_VERSION}
+LABEL gg.base.os="debian-bookworm-slim"
+LABEL gg.requirements.doc="https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-nucleus-lite-component.html"
+LABEL gg.podman.doc="https://github.com/aws-greengrass/aws-greengrass-lite/blob/main/docs/BUILD.md#optional-using-podman"
+
+ENV TINI_KILL_PROCESS_GROUP=1 \
+    GGC_ROOT_PATH=/var/lib/greengrass \
+    GG_NUCLEUS_RUNTIME=lite
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    systemd \
+    systemd-sysv \
+    dbus \
+    ca-certificates \
+    curl \
+    wget \
+    sudo \
+    procps \
+    passwd \
+    python3 \
+    python3-pip \
+    coreutils \
+    grep \
+    util-linux \
+    bash \
+    debianutils \
+    mount \
+    libssl3 \
+    libcurl4 \
+    libsqlite3-0 \
+    libyaml-0-2 \
+    libsystemd0 \
+    liburiparser1 \
+    libuuid1 \
+    libevent-2.1-7 \
+    libzip4 \
+    cgroup-tools \
+    && rm -rf /var/lib/apt/lists/* \
+    && for c in ps sudo sh kill cp chmod rm ln id uname grep mkfifo findmnt useradd groupadd usermod echo systemctl; do \
+         command -v "$c" >/dev/null || exit 1; \
+       done
+
+RUN groupadd -r ggcore \
+    && useradd -r -g ggcore -d /var/lib/greengrass ggcore \
+    && groupadd -r gg_component \
+    && useradd -r -g gg_component gg_component \
+    && mkdir -p /var/lib/greengrass/credentials /etc/greengrass/config.d \
+    && chown -R ggcore:ggcore /var/lib/greengrass
+
+COPY --from=builder /usr/bin/ /usr/bin/
+COPY --from=builder /lib/systemd/system/ /lib/systemd/system/
+COPY --from=builder /lib/tmpfiles.d/ /lib/tmpfiles.d/
+COPY --from=builder /src/misc/container/01defaults.yaml /etc/greengrass/config.d/01defaults.yaml
+COPY --from=builder /src/misc/run_nucleus /usr/local/bin/ggl-run-nucleus
+
+RUN chmod +x /usr/local/bin/ggl-run-nucleus
+
+COPY ggl-container-init.service /lib/systemd/system/ggl-container-init.service
+COPY greengrass-lite-entrypoint.sh /greengrass-lite-entrypoint.sh
+COPY modify-sudoers.sh /
+RUN chmod +x /greengrass-lite-entrypoint.sh /modify-sudoers.sh \
+    && ./modify-sudoers.sh \
+    && ln -sf /lib/systemd/system/ggl-container-init.service \
+         /etc/systemd/system/multi-user.target.wants/ggl-container-init.service
+
+STOPSIGNAL SIGRTMIN+3
+ENTRYPOINT ["/greengrass-lite-entrypoint.sh"]
+CMD ["/lib/systemd/systemd"]

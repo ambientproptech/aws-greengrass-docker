@@ -6,9 +6,12 @@ on:
     branches: [main, mdu2-23755-ci-cd]
     paths:
       - Dockerfile
+      - Dockerfile.lite-base
       - Dockerfile.full
       - Dockerfile.lite
+      - ggl-container-init.service
       - greengrass-entrypoint.sh
+      - greengrass-lite-entrypoint.sh
       - .github/workflows/publish-docker.yml
 
 concurrency:
@@ -17,6 +20,7 @@ concurrency:
 
 env:
   GG_VERSION: "2.16.1"
+  NUCLEUS_LITE_VERSION: "v2.4.0"
 
 jobs:
   publish-base:
@@ -24,6 +28,10 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        flavour: [full, lite]
     steps:
       - uses: actions/checkout@v4
 
@@ -51,28 +59,27 @@ jobs:
         run: |
           echo "IMAGE_NAME=${{ secrets.CONTAINER_REGISTRY }}/${{ secrets.IMAGE_NAME }}" >> "$GITHUB_ENV"
 
-      - name: Docker metadata (base)
+      - name: Docker metadata (base-${{ matrix.flavour }})
         id: metabase
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix=${{ env.GG_VERSION }}-base-,format=short
-            type=raw,value=${{ env.GG_VERSION }}-base-main,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=${{ env.GG_VERSION }}-base-${{ matrix.flavour }}-,format=short
+            type=raw,value=${{ env.GG_VERSION }}-base-${{ matrix.flavour }}-main,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Build and push base image
+      - name: Build and push base-${{ matrix.flavour }} image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile
+          file: ${{ matrix.flavour == 'full' && 'Dockerfile' || 'Dockerfile.lite-base' }}
           platforms: ${{ secrets.PLATFORMS }}
           push: true
           tags: ${{ steps.metabase.outputs.tags }}
           labels: ${{ steps.metabase.outputs.labels }}
-          build-args: |
-            GREENGRASS_RELEASE_VERSION=${{ env.GG_VERSION }}
-          cache-from: type=gha,scope=greengrass-base
-          cache-to: type=gha,mode=max,scope=greengrass-base
+          build-args: ${{ matrix.flavour == 'full' && format('GREENGRASS_RELEASE_VERSION={0}', env.GG_VERSION) || format('NUCLEUS_LITE_VERSION={0}', env.NUCLEUS_LITE_VERSION) }}
+          cache-from: type=gha,scope=greengrass-base-${{ matrix.flavour }}
+          cache-to: type=gha,mode=max,scope=greengrass-base-${{ matrix.flavour }}
 
   publish-flavours:
     needs: publish-base
@@ -130,6 +137,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            BASE_IMAGE=${{ env.IMAGE_NAME }}:${{ env.GG_VERSION }}-base-${{ env.SHORT_SHA }}
+            BASE_IMAGE=${{ env.IMAGE_NAME }}:${{ env.GG_VERSION }}-base-${{ matrix.flavour }}-${{ env.SHORT_SHA }}
           cache-from: type=gha,scope=greengrass-${{ matrix.flavour }}
           cache-to: type=gha,mode=max,scope=greengrass-${{ matrix.flavour }}

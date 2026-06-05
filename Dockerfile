@@ -8,6 +8,7 @@ ARG GREENGRASS_ZIP_FILE=greengrass-${GREENGRASS_RELEASE_VERSION}.zip
 ARG GREENGRASS_RELEASE_URI=https://d2s8p88vqu9w66.cloudfront.net/releases/${GREENGRASS_ZIP_FILE}
 
 LABEL maintainer="AWS IoT Greengrass"
+LABEL gg.nucleus.runtime="full"
 LABEL greengrass-version=${GREENGRASS_RELEASE_VERSION}
 LABEL gg.base.os="debian-bookworm-slim"
 LABEL gg.requirements.doc="https://docs.aws.amazon.com/greengrass/v2/developerguide/setting-up.html"
