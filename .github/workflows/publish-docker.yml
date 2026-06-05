@@ -5,10 +5,9 @@ on:
   push:
     branches: [main, mdu2-23755-ci-cd]
     paths:
-      - Dockerfile
+      - Dockerfile.full-base
       - Dockerfile.lite-base
-      - Dockerfile.full
-      - Dockerfile.lite
+      - Dockerfile.sdk
       - ggl-container-init.service
       - greengrass-entrypoint.sh
       - greengrass-lite-entrypoint.sh
@@ -72,7 +71,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ${{ matrix.flavour == 'full' && 'Dockerfile' || 'Dockerfile.lite-base' }}
+          file: Dockerfile.${{ matrix.flavour }}-base
           platforms: ${{ secrets.PLATFORMS }}
           push: true
           tags: ${{ steps.metabase.outputs.tags }}
@@ -131,12 +130,13 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.${{ matrix.flavour }}
+          file: Dockerfile.sdk
           platforms: ${{ secrets.PLATFORMS }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             BASE_IMAGE=${{ env.IMAGE_NAME }}:${{ env.GG_VERSION }}-base-${{ matrix.flavour }}-${{ env.SHORT_SHA }}
+            NUCLEUS_FLAVOUR=${{ matrix.flavour }}
           cache-from: type=gha,scope=greengrass-${{ matrix.flavour }}
           cache-to: type=gha,mode=max,scope=greengrass-${{ matrix.flavour }}
