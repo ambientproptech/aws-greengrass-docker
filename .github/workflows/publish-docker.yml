@@ -3,7 +3,7 @@ name: Publish Docker image
 on:
   workflow_dispatch:
   push:
-    branches: [main, mdu2-23755-ci-cd]
+    branches: [main, feat/docker-full-lite-flavours]
     paths:
       - Dockerfile.full-base
       - Dockerfile.lite-base
@@ -72,13 +72,18 @@ jobs:
         with:
           context: .
           file: Dockerfile.${{ matrix.flavour }}-base
+          target: ${{ matrix.flavour == 'lite' && 'release' || '' }}
           platforms: ${{ secrets.PLATFORMS }}
           push: true
           tags: ${{ steps.metabase.outputs.tags }}
           labels: ${{ steps.metabase.outputs.labels }}
           build-args: ${{ matrix.flavour == 'full' && format('GREENGRASS_RELEASE_VERSION={0}', env.GG_VERSION) || format('NUCLEUS_LITE_VERSION={0}', env.NUCLEUS_LITE_VERSION) }}
-          cache-from: type=gha,scope=greengrass-base-${{ matrix.flavour }}
-          cache-to: type=gha,mode=max,scope=greengrass-base-${{ matrix.flavour }}
+          cache-from: |
+            type=gha,scope=greengrass-base-${{ matrix.flavour }}
+            type=gha,scope=greengrass-lite-build,enable=${{ matrix.flavour == 'lite' }}
+          cache-to: |
+            type=gha,mode=max,scope=greengrass-base-${{ matrix.flavour }}
+            type=gha,mode=max,scope=greengrass-lite-build,enable=${{ matrix.flavour == 'lite' }}
 
   publish-flavours:
     needs: publish-base

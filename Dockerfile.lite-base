@@ -1,10 +1,15 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 #
-# Greengrass Nucleus Lite base: compile aws-greengrass-lite from source.
+# Greengrass Nucleus Lite: compile in `build`, ship only `release` (runtime).
 # https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-nucleus-lite-component.html
+#
+#   docker build -f Dockerfile.lite-base --target release .
 
-FROM debian:bookworm-slim AS builder
+# -----------------------------------------------------------------------------
+# build — toolchain, source, compile (not published)
+# -----------------------------------------------------------------------------
+FROM debian:bookworm-slim AS build
 
 ARG NUCLEUS_LITE_VERSION=v2.4.0
 ENV DEBIAN_FRONTEND=noninteractive
@@ -38,9 +43,13 @@ RUN cmake -B build \
     -DGGL_SYSTEMD_SYSTEM_GROUP=ggcore \
     -DGGL_SYSTEMD_SYSTEM_DIR=/lib/systemd/system
 
-RUN make -C build -j"$(nproc)" && make -C build install
+RUN make -C build -j"$(nproc)" \
+    && DESTDIR=/install make -C build install
 
-FROM debian:bookworm-slim
+# -----------------------------------------------------------------------------
+# release — runtime image (published as base-lite)
+# -----------------------------------------------------------------------------
+FROM debian:bookworm-slim AS release
 
 ARG NUCLEUS_LITE_VERSION=v2.4.0
 ENV DEBIAN_FRONTEND=noninteractive
@@ -96,11 +105,11 @@ RUN groupadd -r ggcore \
     && mkdir -p /var/lib/greengrass/credentials /etc/greengrass/config.d \
     && chown -R ggcore:ggcore /var/lib/greengrass
 
-COPY --from=builder /usr/bin/ /usr/bin/
-COPY --from=builder /lib/systemd/system/ /lib/systemd/system/
-COPY --from=builder /lib/tmpfiles.d/ /lib/tmpfiles.d/
-COPY --from=builder /src/misc/container/01defaults.yaml /etc/greengrass/config.d/01defaults.yaml
-COPY --from=builder /src/misc/run_nucleus /usr/local/bin/ggl-run-nucleus
+COPY --from=build /install/usr/bin/ /usr/bin/
+COPY --from=build /install/lib/systemd/system/ /lib/systemd/system/
+COPY --from=build /install/lib/tmpfiles.d/ /lib/tmpfiles.d/
+COPY --from=build /src/misc/container/01defaults.yaml /etc/greengrass/config.d/01defaults.yaml
+COPY --from=build /src/misc/run_nucleus /usr/local/bin/ggl-run-nucleus
 
 RUN chmod +x /usr/local/bin/ggl-run-nucleus
 
