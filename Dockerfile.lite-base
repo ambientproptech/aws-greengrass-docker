@@ -4,21 +4,26 @@
 # Greengrass Nucleus Lite: compile in `build`, ship only `release` (runtime).
 # https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-nucleus-lite-component.html
 #
-#   docker build -f Dockerfile.lite-base --target release .
+#   docker build -f Dockerfile.lite-base --target release \
+#     --build-arg GREENGRASS_RELEASE_VERSION=2.16.1 \
+#     --build-arg NUCLEUS_LITE_SOURCE_TAG=v2.5.1 .
 
 # -----------------------------------------------------------------------------
 # build — toolchain, source, compile (not published)
 # -----------------------------------------------------------------------------
 FROM debian:bookworm-slim AS build
 
-ARG NUCLEUS_LITE_VERSION=v2.4.0
+ARG GREENGRASS_RELEASE_VERSION=2.16.1
+# aws-greengrass-lite uses v2.x git tags (not the nucleus zip version). Pair with
+# GREENGRASS_RELEASE_VERSION when bumping releases (see workflow env).
+ARG NUCLEUS_LITE_SOURCE_TAG=v2.5.1
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     build-essential \
     pkg-config \
     cmake \
-    git \
     curl \
     libssl-dev \
     libcurl4-openssl-dev \
@@ -33,8 +38,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
-RUN git clone --depth 1 --branch "${NUCLEUS_LITE_VERSION}" \
-    https://github.com/aws-greengrass/aws-greengrass-lite.git .
+RUN curl -fsSL \
+      "https://codeload.github.com/aws-greengrass/aws-greengrass-lite/tar.gz/refs/tags/${NUCLEUS_LITE_SOURCE_TAG}" \
+    | tar -xz --strip-components=1
 
 RUN cmake -B build \
     -DCMAKE_BUILD_TYPE=MinSizeRel \
@@ -51,12 +57,14 @@ RUN make -C build -j"$(nproc)" \
 # -----------------------------------------------------------------------------
 FROM debian:bookworm-slim AS release
 
-ARG NUCLEUS_LITE_VERSION=v2.4.0
+ARG GREENGRASS_RELEASE_VERSION=2.16.1
+ARG NUCLEUS_LITE_SOURCE_TAG=v2.5.1
 ENV DEBIAN_FRONTEND=noninteractive
 
 LABEL maintainer="AWS IoT Greengrass"
 LABEL gg.nucleus.runtime="lite"
-LABEL greengrass-nucleus-lite-version=${NUCLEUS_LITE_VERSION}
+LABEL greengrass-version=${GREENGRASS_RELEASE_VERSION}
+LABEL greengrass-nucleus-lite-source-tag=${NUCLEUS_LITE_SOURCE_TAG}
 LABEL gg.base.os="debian-bookworm-slim"
 LABEL gg.requirements.doc="https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-nucleus-lite-component.html"
 LABEL gg.podman.doc="https://github.com/aws-greengrass/aws-greengrass-lite/blob/main/docs/BUILD.md#optional-using-podman"

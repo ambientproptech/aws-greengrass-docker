@@ -18,8 +18,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # Greengrass nucleus zip version (full) and image tag prefix (both flavours).
   GG_VERSION: "2.16.1"
-  NUCLEUS_LITE_VERSION: "v2.4.0"
+  # aws-greengrass-lite source tag paired with GG_VERSION (v2.x, not 2.16.x).
+  NUCLEUS_LITE_SOURCE_TAG: "v2.5.1"
 
 jobs:
   publish-base:
@@ -77,7 +79,9 @@ jobs:
           push: true
           tags: ${{ steps.metabase.outputs.tags }}
           labels: ${{ steps.metabase.outputs.labels }}
-          build-args: ${{ matrix.flavour == 'full' && format('GREENGRASS_RELEASE_VERSION={0}', env.GG_VERSION) || format('NUCLEUS_LITE_VERSION={0}', env.NUCLEUS_LITE_VERSION) }}
+          build-args: |
+            GREENGRASS_RELEASE_VERSION=${{ env.GG_VERSION }}
+            NUCLEUS_LITE_SOURCE_TAG=${{ env.NUCLEUS_LITE_SOURCE_TAG }}
           cache-from: |
             type=gha,scope=greengrass-base-${{ matrix.flavour }}
             type=gha,scope=greengrass-lite-build,enable=${{ matrix.flavour == 'lite' }}
