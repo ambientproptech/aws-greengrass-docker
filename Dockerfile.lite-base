@@ -118,7 +118,7 @@ RUN groupadd -r ggcore \
 
 COPY --from=build /install/usr/bin/ /usr/bin/
 COPY --from=build /install/lib/systemd/system/ /lib/systemd/system/
-COPY --from=build /install/lib/tmpfiles.d/ /lib/tmpfiles.d/
+COPY --from=build /install/usr/lib/tmpfiles.d/ /usr/lib/tmpfiles.d/
 COPY --from=build /src/misc/container/01defaults.yaml /etc/greengrass/config.d/01defaults.yaml
 COPY --from=build /src/misc/run_nucleus /usr/local/bin/ggl-run-nucleus
 
