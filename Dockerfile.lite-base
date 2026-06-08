@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 #
@@ -24,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
     cmake \
+    git \
     curl \
     libssl-dev \
     libcurl4-openssl-dev \
@@ -42,14 +44,15 @@ RUN curl -fsSL \
       "https://codeload.github.com/aws-greengrass/aws-greengrass-lite/tar.gz/refs/tags/${NUCLEUS_LITE_SOURCE_TAG}" \
     | tar -xz --strip-components=1
 
-RUN cmake -B build \
-    -DCMAKE_BUILD_TYPE=MinSizeRel \
-    -DCMAKE_INSTALL_PREFIX=/usr \
-    -DGGL_SYSTEMD_SYSTEM_USER=ggcore \
-    -DGGL_SYSTEMD_SYSTEM_GROUP=ggcore \
-    -DGGL_SYSTEMD_SYSTEM_DIR=/lib/systemd/system
-
-RUN make -C build -j"$(nproc)" \
+RUN --mount=type=cache,target=/src/build/_deps,sharing=locked \
+    cmake -B build \
+      -DCMAKE_BUILD_TYPE=MinSizeRel \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DGGL_SYSTEMD_SYSTEM_USER=ggcore \
+      -DGGL_SYSTEMD_SYSTEM_GROUP=ggcore \
+      -DGGL_SYSTEMD_SYSTEM_DIR=/lib/systemd/system \
+    || { cat build/CMakeFiles/CMakeError.log 2>/dev/null; exit 1; } \
+    && make -C build -j"$(nproc)" \
     && DESTDIR=/install make -C build install
 
 # -----------------------------------------------------------------------------
