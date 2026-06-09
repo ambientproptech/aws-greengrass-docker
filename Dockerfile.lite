@@ -2,10 +2,10 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 #
-# Greengrass Nucleus Lite: compile in `build`, ship only `release` (runtime).
+# Greengrass Nucleus Lite + IoT SDK. Compile in `build`, ship `release`.
 # https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-nucleus-lite-component.html
 #
-#   docker build -f Dockerfile.lite-base --target release \
+#   docker build -f Dockerfile.lite --target release \
 #     --build-arg GREENGRASS_RELEASE_VERSION=2.16.1 \
 #     --build-arg NUCLEUS_LITE_SOURCE_TAG=v2.5.1 .
 
@@ -15,8 +15,6 @@
 FROM debian:bookworm-slim AS build
 
 ARG GREENGRASS_RELEASE_VERSION=2.16.1
-# aws-greengrass-lite uses v2.x git tags (not the nucleus zip version). Pair with
-# GREENGRASS_RELEASE_VERSION when bumping releases (see workflow env).
 ARG NUCLEUS_LITE_SOURCE_TAG=v2.5.1
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -56,7 +54,7 @@ RUN --mount=type=cache,target=/src/build/_deps,sharing=locked \
     && DESTDIR=/install make -C build install
 
 # -----------------------------------------------------------------------------
-# release — runtime image (published as base-lite)
+# release — runtime image (published)
 # -----------------------------------------------------------------------------
 FROM debian:bookworm-slim AS release
 
@@ -71,6 +69,7 @@ LABEL greengrass-nucleus-lite-source-tag=${NUCLEUS_LITE_SOURCE_TAG}
 LABEL gg.base.os="debian-bookworm-slim"
 LABEL gg.requirements.doc="https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-nucleus-lite-component.html"
 LABEL gg.podman.doc="https://github.com/aws-greengrass/aws-greengrass-lite/blob/main/docs/BUILD.md#optional-using-podman"
+LABEL org.opencontainers.image.description="Greengrass lite image (nucleus lite + IoT SDK / boto3)"
 
 ENV TINI_KILL_PROCESS_GROUP=1 \
     GGC_ROOT_PATH=/var/lib/greengrass \
@@ -134,6 +133,19 @@ RUN chmod +x /usr/local/bin/ggl-start-nucleus /greengrass-lite-entrypoint.sh /mo
     && rm /tmp/ggl-bake-systemd-enables.sh \
     && ln -sf /lib/systemd/system/ggl-container-init.service \
          /etc/systemd/system/multi-user.target.wants/ggl-container-init.service
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-dev \
+    cmake \
+    build-essential \
+    libssl-dev \
+    zlib1g-dev \
+    pkg-config \
+    && python3 -m pip install --no-cache-dir --break-system-packages awsiotsdk boto3 botocore \
+    && apt-get purge -y cmake build-essential python3-dev pkg-config libssl-dev zlib1g-dev \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 STOPSIGNAL SIGRTMIN+3
 ENTRYPOINT ["/greengrass-lite-entrypoint.sh"]

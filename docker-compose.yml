@@ -8,6 +8,6 @@ services:
     init: true
     build:
       context: .
-      dockerfile: Dockerfile.full-base
+      dockerfile: Dockerfile.full
     container_name: aws-iot-greengrass
     image: x86_64/aws-iot-greengrass:2.5.4

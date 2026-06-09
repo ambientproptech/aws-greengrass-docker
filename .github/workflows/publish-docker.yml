@@ -5,9 +5,8 @@ on:
   push:
     branches: [main, feat/docker-full-lite-flavours]
     paths:
-      - Dockerfile.full-base
-      - Dockerfile.lite-base
-      - Dockerfile.sdk
+      - Dockerfile.full
+      - Dockerfile.lite
       - ggl-container-init.service
       - greengrass-entrypoint.sh
       - greengrass-lite-entrypoint.sh
@@ -20,79 +19,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Greengrass nucleus zip version (full) and image tag prefix (both flavours).
   GG_VERSION: "2.16.1"
-  # aws-greengrass-lite source tag paired with GG_VERSION (v2.x, not 2.16.x).
   NUCLEUS_LITE_SOURCE_TAG: "v2.5.1"
 
 jobs:
-  publish-base:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    strategy:
-      fail-fast: false
-      matrix:
-        flavour: [full, lite]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set short SHA
-        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: configure aws credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Login to ECR
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ secrets.CONTAINER_REGISTRY }}
-
-      - name: Set image name
-        run: |
-          echo "IMAGE_NAME=${{ secrets.CONTAINER_REGISTRY }}/${{ secrets.IMAGE_NAME }}" >> "$GITHUB_ENV"
-
-      - name: Docker metadata (base-${{ matrix.flavour }})
-        id: metabase
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=${{ env.GG_VERSION }}-base-${{ matrix.flavour }}-,format=short
-            type=raw,value=${{ env.GG_VERSION }}-base-${{ matrix.flavour }}-main,enable=${{ github.ref == 'refs/heads/main' }}
-
-      - name: Build and push base-${{ matrix.flavour }} image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile.${{ matrix.flavour }}-base
-          target: ${{ matrix.flavour == 'lite' && 'release' || '' }}
-          platforms: ${{ secrets.PLATFORMS }}
-          push: true
-          tags: ${{ steps.metabase.outputs.tags }}
-          labels: ${{ steps.metabase.outputs.labels }}
-          build-args: |
-            GREENGRASS_RELEASE_VERSION=${{ env.GG_VERSION }}
-            NUCLEUS_LITE_SOURCE_TAG=${{ env.NUCLEUS_LITE_SOURCE_TAG }}
-          cache-from: |
-            type=gha,scope=greengrass-base-${{ matrix.flavour }}
-            type=gha,scope=greengrass-lite-build,enable=${{ matrix.flavour == 'lite' }}
-          cache-to: |
-            type=gha,mode=max,scope=greengrass-base-${{ matrix.flavour }}
-            type=gha,mode=max,scope=greengrass-lite-build,enable=${{ matrix.flavour == 'lite' }}
-
-  publish-flavours:
-    needs: publish-base
+  publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -141,13 +72,18 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.sdk
+          file: Dockerfile.${{ matrix.flavour }}
+          target: ${{ matrix.flavour == 'lite' && 'release' || '' }}
           platforms: ${{ secrets.PLATFORMS }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            BASE_IMAGE=${{ env.IMAGE_NAME }}:${{ env.GG_VERSION }}-base-${{ matrix.flavour }}-${{ env.SHORT_SHA }}
-            NUCLEUS_FLAVOUR=${{ matrix.flavour }}
-          cache-from: type=gha,scope=greengrass-${{ matrix.flavour }}
-          cache-to: type=gha,mode=max,scope=greengrass-${{ matrix.flavour }}
+            GREENGRASS_RELEASE_VERSION=${{ env.GG_VERSION }}
+            NUCLEUS_LITE_SOURCE_TAG=${{ env.NUCLEUS_LITE_SOURCE_TAG }}
+          cache-from: |
+            type=gha,scope=greengrass-${{ matrix.flavour }}
+            type=gha,scope=greengrass-lite-build,enable=${{ matrix.flavour == 'lite' }}
+          cache-to: |
+            type=gha,mode=max,scope=greengrass-${{ matrix.flavour }}
+            type=gha,mode=max,scope=greengrass-lite-build,enable=${{ matrix.flavour == 'lite' }}
