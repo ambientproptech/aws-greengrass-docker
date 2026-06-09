@@ -5,7 +5,7 @@ Before=greengrass-lite.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/ggl-run-nucleus
+ExecStart=/usr/local/bin/ggl-start-nucleus
 RemainAfterExit=yes
 
 [Install]

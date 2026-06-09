@@ -11,6 +11,8 @@ on:
       - ggl-container-init.service
       - greengrass-entrypoint.sh
       - greengrass-lite-entrypoint.sh
+      - scripts/ggl-bake-systemd-enables.sh
+      - scripts/ggl-start-nucleus.sh
       - .github/workflows/publish-docker.yml
 
 concurrency:

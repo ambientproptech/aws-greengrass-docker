@@ -74,7 +74,8 @@ LABEL gg.podman.doc="https://github.com/aws-greengrass/aws-greengrass-lite/blob/
 
 ENV TINI_KILL_PROCESS_GROUP=1 \
     GGC_ROOT_PATH=/var/lib/greengrass \
-    GG_NUCLEUS_RUNTIME=lite
+    GG_NUCLEUS_RUNTIME=lite \
+    INIT_CONFIG=/greengrass/v2/config/config.yaml
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     systemd \
@@ -120,15 +121,17 @@ COPY --from=build /install/usr/bin/ /usr/bin/
 COPY --from=build /install/lib/systemd/system/ /lib/systemd/system/
 COPY --from=build /install/usr/lib/tmpfiles.d/ /usr/lib/tmpfiles.d/
 COPY --from=build /src/misc/container/01defaults.yaml /etc/greengrass/config.d/01defaults.yaml
-COPY --from=build /src/misc/run_nucleus /usr/local/bin/ggl-run-nucleus
-
-RUN chmod +x /usr/local/bin/ggl-run-nucleus
+COPY scripts/ggl-start-nucleus.sh /usr/local/bin/ggl-start-nucleus
+COPY scripts/ggl-bake-systemd-enables.sh /tmp/ggl-bake-systemd-enables.sh
 
 COPY ggl-container-init.service /lib/systemd/system/ggl-container-init.service
 COPY greengrass-lite-entrypoint.sh /greengrass-lite-entrypoint.sh
 COPY modify-sudoers.sh /
-RUN chmod +x /greengrass-lite-entrypoint.sh /modify-sudoers.sh \
+RUN chmod +x /usr/local/bin/ggl-start-nucleus /greengrass-lite-entrypoint.sh /modify-sudoers.sh \
     && ./modify-sudoers.sh \
+    && chmod +x /tmp/ggl-bake-systemd-enables.sh \
+    && /tmp/ggl-bake-systemd-enables.sh \
+    && rm /tmp/ggl-bake-systemd-enables.sh \
     && ln -sf /lib/systemd/system/ggl-container-init.service \
          /etc/systemd/system/multi-user.target.wants/ggl-container-init.service
 
