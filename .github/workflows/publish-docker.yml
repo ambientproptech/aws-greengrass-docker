@@ -8,6 +8,7 @@ on:
       - Dockerfile.full
       - Dockerfile.lite
       - ggl-container-init.service
+      - greengrass.service
       - greengrass-entrypoint.sh
       - greengrass-lite-entrypoint.sh
       - scripts/ggl-bake-systemd-enables.sh

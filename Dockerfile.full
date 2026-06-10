@@ -1,8 +1,10 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 #
-# Greengrass full nucleus (Java) + IoT SDK.
+# Greengrass full nucleus (Java) + IoT SDK. systemd runs greengrass.service for OTA.
 #   docker build -f Dockerfile.full --build-arg GREENGRASS_RELEASE_VERSION=2.16.1 .
+#
+# Run privileged (Balena/Docker); mount /greengrass/v2 for persistent state.
 
 FROM debian:bookworm-slim
 
@@ -36,9 +38,13 @@ ENV TINI_KILL_PROCESS_GROUP=1 \
     TRUSTED_PLUGIN=default_trusted_plugin_path \
     THING_POLICY_NAME=default_thing_policy_name
 
-COPY "greengrass-entrypoint.sh" /
+COPY greengrass-entrypoint.sh /
+COPY greengrass.service /greengrass.service
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    systemd \
+    systemd-sysv \
+    dbus \
     ca-certificates \
     curl \
     wget \
@@ -61,14 +67,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && dpkg-query -W libc6 \
     && dpkg --compare-versions "$(dpkg-query -W -f '${Version}' libc6)" ge 2.25 \
     && test -x "$(command -v java)" \
-    && for c in ps sudo sh kill cp chmod rm ln id uname grep mkfifo aws findmnt useradd groupadd usermod echo; do command -v "$c" >/dev/null || exit 1; done \
+    && for c in ps sudo sh kill cp chmod rm ln id uname grep mkfifo aws findmnt useradd groupadd usermod echo systemctl; do command -v "$c" >/dev/null || exit 1; done \
     && wget -q "$GREENGRASS_RELEASE_URI" -O "$GREENGRASS_ZIP_FILE" \
     && chmod +x /greengrass-entrypoint.sh \
     && mkdir -p /opt/greengrassv2 "$GGC_ROOT_PATH" \
     && unzip -q "$GREENGRASS_ZIP_FILE" -d /opt/greengrassv2 \
     && rm -f "$GREENGRASS_ZIP_FILE"
 
-COPY "modify-sudoers.sh" /
+COPY modify-sudoers.sh /
 RUN chmod +x /modify-sudoers.sh \
     && ./modify-sudoers.sh
 
@@ -85,4 +91,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+STOPSIGNAL SIGRTMIN+3
 ENTRYPOINT ["/greengrass-entrypoint.sh"]
+CMD ["/lib/systemd/systemd"]

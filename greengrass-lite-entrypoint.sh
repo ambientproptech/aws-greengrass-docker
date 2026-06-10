@@ -13,34 +13,25 @@ if command -v findmnt >/dev/null 2>&1; then
 	fi
 fi
 
-# Lite reads /etc/greengrass/config.yaml (+ config.d). Balena/full images often mount
-# /greengrass/v2 — wire that layout without requiring a second bind to /etc/greengrass.
-link_lite_config() {
-	src=$1
-	dst=/etc/greengrass/config.yaml
-	if [ ! -f "$src" ]; then
-		return 1
-	fi
-	if [ -e "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$src")" ]; then
-		echo "Using Greengrass config: $src"
-		return 0
-	fi
-	if [ -e "$dst" ] && ! [ -L "$dst" ]; then
-		echo "Using Greengrass config: $dst (mounted directly)"
-		return 0
-	fi
-	ln -sf "$src" "$dst"
-	echo "Using Greengrass config: $src -> $dst"
-}
+# Lite reads /etc/greengrass/config.yaml (+ config.d). Balena/full images mount
+# /greengrass/v2 — always prefer that path when present (over stale layer files).
+config_src=""
+if [ -n "${INIT_CONFIG}" ] && [ "${INIT_CONFIG}" != "default_init_config" ] && [ -f "${INIT_CONFIG}" ]; then
+	config_src="${INIT_CONFIG}"
+elif [ -f /greengrass/v2/config/config.yaml ]; then
+	config_src="/greengrass/v2/config/config.yaml"
+fi
 
-config_linked=false
-if [ -f /etc/greengrass/config.yaml ] && ! [ -L /etc/greengrass/config.yaml ]; then
-	echo "Using Greengrass config: /etc/greengrass/config.yaml (mounted directly)"
-	config_linked=true
-elif [ -n "${INIT_CONFIG}" ] && [ "${INIT_CONFIG}" != "default_init_config" ] && link_lite_config "${INIT_CONFIG}"; then
-	config_linked=true
-elif link_lite_config /greengrass/v2/config/config.yaml; then
-	config_linked=true
+if [ -n "$config_src" ]; then
+	ln -sf "$config_src" /etc/greengrass/config.yaml
+	echo "Using Greengrass config: $config_src -> /etc/greengrass/config.yaml"
+elif [ -f /etc/greengrass/config.yaml ]; then
+	echo "Using Greengrass config: /etc/greengrass/config.yaml"
+else
+	echo "WARNING: No Greengrass config found."
+	echo "  Mount /greengrass/v2 (with config/config.yaml), or"
+	echo "  /etc/greengrass/config.yaml, or set INIT_CONFIG to your config path."
+	echo "See https://github.com/aws-greengrass/aws-greengrass-lite/blob/main/docs/BUILD.md#optional-using-podman"
 fi
 
 if [ -d /greengrass/v2/config.d ]; then
@@ -48,19 +39,16 @@ if [ -d /greengrass/v2/config.d ]; then
 		[ -f "$fragment" ] || continue
 		name=$(basename "$fragment")
 		dst="/etc/greengrass/config.d/$name"
-		if [ -e "$dst" ]; then
-			continue
-		fi
 		ln -sf "$fragment" "$dst"
-		echo "Using Greengrass config fragment: $fragment -> $dst"
 	done
 fi
 
-if [ "$config_linked" = false ] && [ -z "$(ls -A /etc/greengrass/config.d 2>/dev/null)" ]; then
-	echo "WARNING: No Greengrass config found."
-	echo "  Mount /greengrass/v2 (with config/config.yaml), or"
-	echo "  /etc/greengrass/config.yaml, or set INIT_CONFIG to your config path."
-	echo "See https://github.com/aws-greengrass/aws-greengrass-lite/blob/main/docs/BUILD.md#optional-using-podman"
+# Lite daemons (iotcored, tesd) run as ggcore; balena bind-mounts certs as root:root.
+if [ -d /greengrass/v2/certs ]; then
+	if chown -R ggcore:ggcore /greengrass/v2/certs 2>/dev/null; then
+		chmod 640 /greengrass/v2/certs/private.pem.key 2>/dev/null || true
+		echo "Set ggcore ownership on /greengrass/v2/certs"
+	fi
 fi
 
 if [ "$1" = "/lib/systemd/systemd" ]; then

@@ -5,7 +5,7 @@ version: '3.7'
 
 services:
   greengrass:
-    init: true
+    privileged: true
     build:
       context: .
       dockerfile: Dockerfile.full
