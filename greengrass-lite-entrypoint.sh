@@ -51,6 +51,15 @@ if [ -d /greengrass/v2/certs ]; then
 	fi
 fi
 
+# Bind mounts often replace /var/lib/greengrass or /greengrass/v2 without Lite subdirs.
+for gg_root in /var/lib/greengrass /greengrass/v2; do
+	[ -d "$gg_root" ] || continue
+	for sub in recipes packages work; do
+		mkdir -p "$gg_root/$sub"
+		chown ggcore:ggcore "$gg_root/$sub" 2>/dev/null || true
+	done
+done
+
 if [ "$1" = "/lib/systemd/systemd" ]; then
 	echo "Starting Greengrass Nucleus Lite (systemd PID 1)."
 	exec /lib/systemd/systemd
