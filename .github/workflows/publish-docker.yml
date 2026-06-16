@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GG_VERSION: "2.16.1"
+  GG_FULL_VERSION: "2.16.1"
   NUCLEUS_LITE_SOURCE_TAG: "v2.5.1"
 
 jobs:
@@ -60,14 +60,22 @@ jobs:
         run: |
           echo "IMAGE_NAME=${{ secrets.CONTAINER_REGISTRY }}/${{ secrets.IMAGE_NAME }}" >> "$GITHUB_ENV"
 
+      - name: Set image tag version (${{ matrix.flavour }})
+        run: |
+          if [ "${{ matrix.flavour }}" = "lite" ]; then
+            echo "IMAGE_TAG_VERSION=${NUCLEUS_LITE_SOURCE_TAG#v}" >> "$GITHUB_ENV"
+          else
+            echo "IMAGE_TAG_VERSION=${{ env.GG_FULL_VERSION }}" >> "$GITHUB_ENV"
+          fi
+
       - name: Docker metadata (${{ matrix.flavour }})
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix=${{ env.GG_VERSION }}-${{ matrix.flavour }}-,format=short
-            type=raw,value=${{ env.GG_VERSION }}-${{ matrix.flavour }}-main,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=${{ env.IMAGE_TAG_VERSION }}-${{ matrix.flavour }}-,format=short
+            type=raw,value=${{ env.IMAGE_TAG_VERSION }}-${{ matrix.flavour }}-main,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push ${{ matrix.flavour }} image
         uses: docker/build-push-action@v6
@@ -80,7 +88,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            GREENGRASS_RELEASE_VERSION=${{ env.GG_VERSION }}
+            GREENGRASS_RELEASE_VERSION=${{ env.IMAGE_TAG_VERSION }}
             NUCLEUS_LITE_SOURCE_TAG=${{ env.NUCLEUS_LITE_SOURCE_TAG }}
           cache-from: |
             type=gha,scope=greengrass-${{ matrix.flavour }}
