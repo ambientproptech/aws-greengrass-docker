@@ -3,11 +3,16 @@ name: Publish Docker image
 on:
   workflow_dispatch:
   push:
-    branches: [main, mdu2-23755-ci-cd]
+    branches: [main, feat/docker-full-lite-flavours]
     paths:
-      - Dockerfile
-      - Dockerfile.release
+      - Dockerfile.full
+      - Dockerfile.lite
+      - ggl-container-init.service
+      - greengrass.service
       - greengrass-entrypoint.sh
+      - greengrass-lite-entrypoint.sh
+      - scripts/ggl-bake-systemd-enables.sh
+      - scripts/ggl-start-nucleus.sh
       - .github/workflows/publish-docker.yml
 
 concurrency:
@@ -15,7 +20,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GG_VERSION: "2.16.1"
+  GG_FULL_VERSION: "2.16.1"
+  NUCLEUS_LITE_SOURCE_TAG: "v2.5.1"
 
 jobs:
   publish:
@@ -23,6 +29,10 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        flavour: [full, lite]
     steps:
       - uses: actions/checkout@v4
 
@@ -50,48 +60,39 @@ jobs:
         run: |
           echo "IMAGE_NAME=${{ secrets.CONTAINER_REGISTRY }}/${{ secrets.IMAGE_NAME }}" >> "$GITHUB_ENV"
 
-      - name: Docker metadata (base)
-        id: metabase
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=${{ env.GG_VERSION }}-base-,format=short
-            type=raw,value=${{ env.GG_VERSION }}-base-main,enable=${{ github.ref == 'refs/heads/main' }}
+      - name: Set image tag version (${{ matrix.flavour }})
+        run: |
+          if [ "${{ matrix.flavour }}" = "lite" ]; then
+            echo "IMAGE_TAG_VERSION=${NUCLEUS_LITE_SOURCE_TAG#v}" >> "$GITHUB_ENV"
+          else
+            echo "IMAGE_TAG_VERSION=${{ env.GG_FULL_VERSION }}" >> "$GITHUB_ENV"
+          fi
 
-      - name: Build and push base image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile
-          platforms: ${{ secrets.PLATFORMS }}
-          push: true
-          tags: ${{ steps.metabase.outputs.tags }}
-          labels: ${{ steps.metabase.outputs.labels }}
-          build-args: |
-            GREENGRASS_RELEASE_VERSION=${{ env.GG_VERSION }}
-          cache-from: type=gha,scope=greengrass-base
-          cache-to: type=gha,mode=max,scope=greengrass-base
-
-      - name: Docker metadata (release)
+      - name: Docker metadata (${{ matrix.flavour }})
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix=${{ env.GG_VERSION }}-,format=short
-            type=raw,value=${{ env.GG_VERSION }}-main,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=${{ env.IMAGE_TAG_VERSION }}-${{ matrix.flavour }}-,format=short
+            type=raw,value=${{ env.IMAGE_TAG_VERSION }}-${{ matrix.flavour }}-main,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Build and push release image
+      - name: Build and push ${{ matrix.flavour }} image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.release
+          file: Dockerfile.${{ matrix.flavour }}
+          target: ${{ matrix.flavour == 'lite' && 'release' || '' }}
           platforms: ${{ secrets.PLATFORMS }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            BASE_IMAGE=${{ env.IMAGE_NAME }}:${{ env.GG_VERSION }}-base-${{ env.SHORT_SHA }}
-          cache-from: type=gha,scope=greengrass-release
-          cache-to: type=gha,mode=max,scope=greengrass-release
+            GREENGRASS_RELEASE_VERSION=${{ env.IMAGE_TAG_VERSION }}
+            NUCLEUS_LITE_SOURCE_TAG=${{ env.NUCLEUS_LITE_SOURCE_TAG }}
+          cache-from: |
+            type=gha,scope=greengrass-${{ matrix.flavour }}
+            type=gha,scope=greengrass-lite-build,enable=${{ matrix.flavour == 'lite' }}
+          cache-to: |
+            type=gha,mode=max,scope=greengrass-${{ matrix.flavour }}
+            type=gha,mode=max,scope=greengrass-lite-build,enable=${{ matrix.flavour == 'lite' }}

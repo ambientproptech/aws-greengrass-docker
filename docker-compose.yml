@@ -5,9 +5,9 @@ version: '3.7'
 
 services:
   greengrass:
-    init: true
+    privileged: true
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.full
     container_name: aws-iot-greengrass
     image: x86_64/aws-iot-greengrass:2.5.4

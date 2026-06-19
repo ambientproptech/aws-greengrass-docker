@@ -1,0 +1,12 @@
+[Unit]
+Description=Enable and start Greengrass Nucleus Lite systemd units
+After=dbus.service
+Before=greengrass-lite.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ggl-start-nucleus
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
