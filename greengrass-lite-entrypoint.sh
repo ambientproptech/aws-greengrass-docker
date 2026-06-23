@@ -60,6 +60,9 @@ for gg_root in /var/lib/greengrass /greengrass/v2; do
 	done
 done
 
+# Component unit files persist under rootPath; ggl-reconcile-component-units (via
+# ggl-container-init) re-links them into /etc/systemd/system on each boot.
+
 if [ "$1" = "/lib/systemd/systemd" ]; then
 	echo "Starting Greengrass Nucleus Lite (systemd PID 1)."
 	exec /lib/systemd/systemd

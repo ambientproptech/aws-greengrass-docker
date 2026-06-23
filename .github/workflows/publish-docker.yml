@@ -12,7 +12,9 @@ on:
       - greengrass-entrypoint.sh
       - greengrass-lite-entrypoint.sh
       - scripts/ggl-bake-systemd-enables.sh
+      - scripts/ggl-reconcile-component-units.sh
       - scripts/ggl-start-nucleus.sh
+      - config/systemd/system.conf.d/greengrass-component-units.conf
       - .github/workflows/publish-docker.yml
 
 concurrency:
