@@ -103,6 +103,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libevent-2.1-7 \
     libzip4 \
     cgroup-tools \
+    logrotate \
     && rm -rf /var/lib/apt/lists/* \
     && for c in ps sudo sh kill cp chmod rm ln id uname grep mkfifo findmnt useradd groupadd usermod echo systemctl; do \
          command -v "$c" >/dev/null || exit 1; \
@@ -124,6 +125,9 @@ COPY scripts/ggl-reconcile-component-units.sh /usr/local/bin/ggl-reconcile-compo
 COPY scripts/ggl-bake-systemd-enables.sh /tmp/ggl-bake-systemd-enables.sh
 COPY config/systemd/system.conf.d/greengrass-component-units.conf \
   /etc/systemd/system.conf.d/greengrass-component-units.conf
+COPY config/journald.conf.d/ /etc/systemd/journald.conf.d/
+COPY config/systemd/ggl-.service.d/ /etc/systemd/system/ggl-.service.d/
+COPY config/logrotate.d/greengrass-systemd /etc/logrotate.d/greengrass-systemd
 
 COPY ggl-container-init.service /lib/systemd/system/ggl-container-init.service
 COPY greengrass-lite-entrypoint.sh /greengrass-lite-entrypoint.sh
@@ -135,7 +139,9 @@ RUN chmod +x /usr/local/bin/ggl-start-nucleus /usr/local/bin/ggl-reconcile-compo
     && /tmp/ggl-bake-systemd-enables.sh \
     && rm /tmp/ggl-bake-systemd-enables.sh \
     && ln -sf /lib/systemd/system/ggl-container-init.service \
-         /etc/systemd/system/multi-user.target.wants/ggl-container-init.service
+         /etc/systemd/system/multi-user.target.wants/ggl-container-init.service \
+    && ln -sf /lib/systemd/system/logrotate.timer \
+         /etc/systemd/system/timers.target.wants/logrotate.timer
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev \

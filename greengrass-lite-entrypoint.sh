@@ -43,7 +43,7 @@ if [ -d /greengrass/v2/config.d ]; then
 	done
 fi
 
-# Lite daemons (iotcored, tesd) run as ggcore; balena bind-mounts certs as root:root.
+# Lite daemons (iotcored, tesd, ggconfigd) run as ggcore; bind mounts often arrive root-owned.
 if [ -d /greengrass/v2/certs ]; then
 	if chown -R ggcore:ggcore /greengrass/v2/certs 2>/dev/null; then
 		chmod 640 /greengrass/v2/certs/private.pem.key 2>/dev/null || true
@@ -51,7 +51,13 @@ if [ -d /greengrass/v2/certs ]; then
 	fi
 fi
 
-# Bind mounts often replace /var/lib/greengrass or /greengrass/v2 without Lite subdirs.
+if [ -d /var/lib/greengrass ]; then
+	if chown -R ggcore:ggcore /var/lib/greengrass 2>/dev/null; then
+		echo "Set ggcore ownership on /var/lib/greengrass (config.db and runtime state)"
+	fi
+fi
+
+# Ensure Lite work dirs exist under bind mounts (recipes/packages/work only if not fully chowned above).
 for gg_root in /var/lib/greengrass /greengrass/v2; do
 	[ -d "$gg_root" ] || continue
 	for sub in recipes packages work; do
@@ -62,6 +68,12 @@ done
 
 # Component unit files persist under rootPath; ggl-reconcile-component-units (via
 # ggl-container-init) re-links them into /etc/systemd/system on each boot.
+
+# Per-unit log files (StandardOutput=append). systemd (root) creates/opens them
+# before dropping to the service user, so the directory must exist and be on a
+# writable mount — not :ro.
+mkdir -p /greengrass/v2/logs/systemd
+chmod 755 /greengrass/v2/logs/systemd
 
 if [ "$1" = "/lib/systemd/systemd" ]; then
 	echo "Starting Greengrass Nucleus Lite (systemd PID 1)."
