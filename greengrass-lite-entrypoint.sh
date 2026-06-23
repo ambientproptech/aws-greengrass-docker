@@ -69,10 +69,24 @@ done
 # Component unit files persist under rootPath; ggl-reconcile-component-units (via
 # ggl-container-init) re-links them into /etc/systemd/system on each boot.
 
-# Per-unit log dirs (/greengrass/v2/logs/systemd/<unit>/service.log). Each unit
-# drop-in runs ExecStartPre=mkdir; parent must be writable — not :ro.
+# Per-unit log dirs must exist before systemd starts a unit (StandardOutput=append
+# is set up before ExecStartPre). Writable mount — not :ro.
 mkdir -p /greengrass/v2/logs/systemd
 chmod 755 /greengrass/v2/logs/systemd
+for unitfile in /lib/systemd/system/ggl*.service /lib/systemd/system/ggl-*.service; do
+	[ -f "$unitfile" ] || continue
+	/usr/local/bin/ggl-ensure-unit-log-dir "$(basename "$unitfile")"
+done
+_root="${GGC_ROOT_PATH:-/var/lib/greengrass}"
+if [ -d "$_root" ]; then
+	for unitfile in "$_root"/ggl.*.service; do
+		[ -f "$unitfile" ] || continue
+		case "$(basename "$unitfile")" in
+		ggl.core.*) continue ;;
+		esac
+		/usr/local/bin/ggl-ensure-unit-log-dir "$(basename "$unitfile")"
+	done
+fi
 
 if [ "$1" = "/lib/systemd/systemd" ]; then
 	echo "Starting Greengrass Nucleus Lite (systemd PID 1)."

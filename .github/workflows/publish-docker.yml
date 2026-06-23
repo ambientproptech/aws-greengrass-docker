@@ -15,6 +15,7 @@ on:
       - scripts/ggl-reconcile-component-units.sh
       - scripts/ggl-start-nucleus.sh
       - scripts/ggl-install-unit-logging.sh
+      - scripts/ggl-ensure-unit-log-dir.sh
       - config/**
       - .github/workflows/publish-docker.yml
 

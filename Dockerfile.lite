@@ -122,6 +122,7 @@ COPY --from=build /install/usr/lib/tmpfiles.d/ /usr/lib/tmpfiles.d/
 COPY --from=build /src/misc/container/01defaults.yaml /etc/greengrass/config.d/01defaults.yaml
 COPY scripts/ggl-start-nucleus.sh /usr/local/bin/ggl-start-nucleus
 COPY scripts/ggl-reconcile-component-units.sh /usr/local/bin/ggl-reconcile-component-units
+COPY scripts/ggl-ensure-unit-log-dir.sh /usr/local/bin/ggl-ensure-unit-log-dir
 COPY scripts/ggl-install-unit-logging.sh /usr/local/bin/ggl-install-unit-logging
 COPY scripts/ggl-bake-systemd-enables.sh /tmp/ggl-bake-systemd-enables.sh
 COPY config/systemd/system.conf.d/greengrass-component-units.conf \
@@ -133,7 +134,7 @@ COPY ggl-container-init.service /lib/systemd/system/ggl-container-init.service
 COPY greengrass-lite-entrypoint.sh /greengrass-lite-entrypoint.sh
 COPY modify-sudoers.sh /
 RUN chmod +x /usr/local/bin/ggl-start-nucleus /usr/local/bin/ggl-reconcile-component-units \
-    /usr/local/bin/ggl-install-unit-logging \
+    /usr/local/bin/ggl-ensure-unit-log-dir /usr/local/bin/ggl-install-unit-logging \
     /greengrass-lite-entrypoint.sh /modify-sudoers.sh \
     && ./modify-sudoers.sh \
     && chmod +x /tmp/ggl-bake-systemd-enables.sh \

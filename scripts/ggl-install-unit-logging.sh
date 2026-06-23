@@ -19,11 +19,14 @@ ggl.*|ggl-*|greengrass.service) ;;
 *) exit 0 ;;
 esac
 
+/usr/local/bin/ggl-ensure-unit-log-dir "$unit"
+
+base=${unit%.service}
+logdir="/greengrass/v2/logs/systemd/${base}"
 dropdir="/etc/systemd/system/${unit}.d"
 mkdir -p "$dropdir"
-cat >"$dropdir/10-logging.conf" <<'EOF'
+cat >"$dropdir/10-logging.conf" <<EOF
 [Service]
-ExecStartPre=+/bin/mkdir -p /greengrass/v2/logs/systemd/%n
-StandardOutput=append:/greengrass/v2/logs/systemd/%n/service.log
-StandardError=append:/greengrass/v2/logs/systemd/%n/service.log
+StandardOutput=append:${logdir}/service.log
+StandardError=append:${logdir}/service.log
 EOF
