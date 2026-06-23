@@ -6,15 +6,15 @@
 # https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-nucleus-lite-component.html
 #
 #   docker build -f Dockerfile.lite --target release \
-#     --build-arg GREENGRASS_RELEASE_VERSION=2.5.1 \
-#     --build-arg NUCLEUS_LITE_SOURCE_TAG=v2.5.1 .
+#     --build-arg GREENGRASS_RELEASE_VERSION=2.6.0 \
+#     --build-arg NUCLEUS_LITE_SOURCE_TAG=v2.6.0 .
 
 # -----------------------------------------------------------------------------
 # build — toolchain, source, compile (not published)
 # -----------------------------------------------------------------------------
 FROM debian:bookworm-slim AS build
 
-ARG NUCLEUS_LITE_SOURCE_TAG=v2.5.1
+ARG NUCLEUS_LITE_SOURCE_TAG=v2.6.0
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -57,8 +57,8 @@ RUN --mount=type=cache,target=/src/build/_deps,sharing=locked \
 # -----------------------------------------------------------------------------
 FROM debian:bookworm-slim AS release
 
-ARG GREENGRASS_RELEASE_VERSION=2.5.1
-ARG NUCLEUS_LITE_SOURCE_TAG=v2.5.1
+ARG GREENGRASS_RELEASE_VERSION=2.6.0
+ARG NUCLEUS_LITE_SOURCE_TAG=v2.6.0
 ENV DEBIAN_FRONTEND=noninteractive
 
 LABEL maintainer="AWS IoT Greengrass"

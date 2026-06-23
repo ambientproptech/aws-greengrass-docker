@@ -3,7 +3,7 @@ name: Publish Docker image
 on:
   workflow_dispatch:
   push:
-    branches: [main, feat/docker-full-lite-flavours]
+    branches: [main, feat/lite-2.6.0]
     paths:
       - Dockerfile.full
       - Dockerfile.lite
@@ -21,7 +21,7 @@ concurrency:
 
 env:
   GG_FULL_VERSION: "2.16.1"
-  NUCLEUS_LITE_SOURCE_TAG: "v2.5.1"
+  NUCLEUS_LITE_SOURCE_TAG: "v2.6.0"
 
 jobs:
   publish:
