@@ -6,15 +6,15 @@
 # https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-nucleus-lite-component.html
 #
 #   docker build -f Dockerfile.lite --target release \
-#     --build-arg GREENGRASS_RELEASE_VERSION=2.5.1 \
-#     --build-arg NUCLEUS_LITE_SOURCE_TAG=v2.5.1 .
+#     --build-arg GREENGRASS_RELEASE_VERSION=2.6.0 \
+#     --build-arg NUCLEUS_LITE_SOURCE_TAG=v2.6.0 .
 
 # -----------------------------------------------------------------------------
 # build — toolchain, source, compile (not published)
 # -----------------------------------------------------------------------------
 FROM debian:bookworm-slim AS build
 
-ARG NUCLEUS_LITE_SOURCE_TAG=v2.5.1
+ARG NUCLEUS_LITE_SOURCE_TAG=v2.6.0
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -57,8 +57,8 @@ RUN --mount=type=cache,target=/src/build/_deps,sharing=locked \
 # -----------------------------------------------------------------------------
 FROM debian:bookworm-slim AS release
 
-ARG GREENGRASS_RELEASE_VERSION=2.5.1
-ARG NUCLEUS_LITE_SOURCE_TAG=v2.5.1
+ARG GREENGRASS_RELEASE_VERSION=2.6.0
+ARG NUCLEUS_LITE_SOURCE_TAG=v2.6.0
 ENV DEBIAN_FRONTEND=noninteractive
 
 LABEL maintainer="AWS IoT Greengrass"
@@ -103,6 +103,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libevent-2.1-7 \
     libzip4 \
     cgroup-tools \
+    logrotate \
     && rm -rf /var/lib/apt/lists/* \
     && for c in ps sudo sh kill cp chmod rm ln id uname grep mkfifo findmnt useradd groupadd usermod echo systemctl; do \
          command -v "$c" >/dev/null || exit 1; \
@@ -120,18 +121,29 @@ COPY --from=build /install/lib/systemd/system/ /lib/systemd/system/
 COPY --from=build /install/usr/lib/tmpfiles.d/ /usr/lib/tmpfiles.d/
 COPY --from=build /src/misc/container/01defaults.yaml /etc/greengrass/config.d/01defaults.yaml
 COPY scripts/ggl-start-nucleus.sh /usr/local/bin/ggl-start-nucleus
+COPY scripts/ggl-reconcile-component-units.sh /usr/local/bin/ggl-reconcile-component-units
+COPY scripts/ggl-ensure-unit-log-dir.sh /usr/local/bin/ggl-ensure-unit-log-dir
+COPY scripts/ggl-install-unit-logging.sh /usr/local/bin/ggl-install-unit-logging
 COPY scripts/ggl-bake-systemd-enables.sh /tmp/ggl-bake-systemd-enables.sh
+COPY config/systemd/system.conf.d/greengrass-component-units.conf \
+  /etc/systemd/system.conf.d/greengrass-component-units.conf
+COPY config/journald.conf.d/ /etc/systemd/journald.conf.d/
+COPY config/logrotate.d/greengrass-systemd /etc/logrotate.d/greengrass-systemd
 
 COPY ggl-container-init.service /lib/systemd/system/ggl-container-init.service
 COPY greengrass-lite-entrypoint.sh /greengrass-lite-entrypoint.sh
 COPY modify-sudoers.sh /
-RUN chmod +x /usr/local/bin/ggl-start-nucleus /greengrass-lite-entrypoint.sh /modify-sudoers.sh \
+RUN chmod +x /usr/local/bin/ggl-start-nucleus /usr/local/bin/ggl-reconcile-component-units \
+    /usr/local/bin/ggl-ensure-unit-log-dir /usr/local/bin/ggl-install-unit-logging \
+    /greengrass-lite-entrypoint.sh /modify-sudoers.sh \
     && ./modify-sudoers.sh \
     && chmod +x /tmp/ggl-bake-systemd-enables.sh \
     && /tmp/ggl-bake-systemd-enables.sh \
     && rm /tmp/ggl-bake-systemd-enables.sh \
     && ln -sf /lib/systemd/system/ggl-container-init.service \
-         /etc/systemd/system/multi-user.target.wants/ggl-container-init.service
+         /etc/systemd/system/multi-user.target.wants/ggl-container-init.service \
+    && ln -sf /lib/systemd/system/logrotate.timer \
+         /etc/systemd/system/timers.target.wants/logrotate.timer
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev \

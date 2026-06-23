@@ -1,0 +1,10 @@
+/greengrass/v2/logs/systemd/*/service.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    maxsize 10M
+}
