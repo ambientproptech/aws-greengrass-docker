@@ -68,4 +68,11 @@ for unit in \
 	ggl.aws.greengrass.TokenExchangeService.service
 do
 	link_unit "$unit"
+	case "$unit" in
+	*.service) /usr/local/bin/ggl-install-unit-logging "$unit" ;;
+	esac
 done
+
+if [ -f /lib/systemd/system/ggl-container-init.service ]; then
+	/usr/local/bin/ggl-install-unit-logging ggl-container-init.service
+fi

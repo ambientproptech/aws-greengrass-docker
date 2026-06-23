@@ -69,9 +69,8 @@ done
 # Component unit files persist under rootPath; ggl-reconcile-component-units (via
 # ggl-container-init) re-links them into /etc/systemd/system on each boot.
 
-# Per-unit log files (StandardOutput=append). systemd (root) creates/opens them
-# before dropping to the service user, so the directory must exist and be on a
-# writable mount — not :ro.
+# Per-unit log dirs (/greengrass/v2/logs/systemd/<unit>/service.log). Each unit
+# drop-in runs ExecStartPre=mkdir; parent must be writable — not :ro.
 mkdir -p /greengrass/v2/logs/systemd
 chmod 755 /greengrass/v2/logs/systemd
 

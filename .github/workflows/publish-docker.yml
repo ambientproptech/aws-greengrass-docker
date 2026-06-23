@@ -14,6 +14,7 @@ on:
       - scripts/ggl-bake-systemd-enables.sh
       - scripts/ggl-reconcile-component-units.sh
       - scripts/ggl-start-nucleus.sh
+      - scripts/ggl-install-unit-logging.sh
       - config/**
       - .github/workflows/publish-docker.yml
 

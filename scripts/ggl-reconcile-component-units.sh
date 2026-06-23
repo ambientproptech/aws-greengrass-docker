@@ -25,9 +25,11 @@ for unit in "$ROOT"/ggl.*.service; do
 		ln -sf "$unit" "/etc/systemd/system/$base"
 	fi
 	systemctl enable "$base" >/dev/null 2>&1 || true
+	/usr/local/bin/ggl-install-unit-logging "$base"
 	linked=$((linked + 1))
 done
 
 if [ "$linked" -gt 0 ]; then
+	echo "ggl-reconcile-component-units: linked $linked component unit(s)"
 	systemctl daemon-reload
 fi
