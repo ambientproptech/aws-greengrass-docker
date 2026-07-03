@@ -66,14 +66,14 @@ LABEL gg.nucleus.runtime="lite"
 LABEL greengrass-version=${GREENGRASS_RELEASE_VERSION}
 LABEL greengrass-nucleus-lite-source-tag=${NUCLEUS_LITE_SOURCE_TAG}
 LABEL gg.base.os="debian-bookworm-slim"
-LABEL gg.requirements.doc="https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-nucleus-lite-component.html"
+LABEL gg.requirements.doc="https://docs.aws.amazon.com/greengrass//developerguide/greengrass-nucleus-lite-component.html"
 LABEL gg.podman.doc="https://github.com/aws-greengrass/aws-greengrass-lite/blob/main/docs/BUILD.md#optional-using-podman"
 LABEL org.opencontainers.image.description="Greengrass lite image (nucleus lite + IoT SDK / boto3)"
 
 ENV TINI_KILL_PROCESS_GROUP=1 \
     GGC_ROOT_PATH=/var/lib/greengrass \
     GG_NUCLEUS_RUNTIME=lite \
-    INIT_CONFIG=/greengrass/v2/config/config.yaml
+    INIT_CONFIG=/greengrass/config/config.yaml
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     systemd \
