@@ -141,7 +141,7 @@ Launched Nucleus successfully.
 To debug issues with the container, you can persist the runtime logs or attach an interactive shell.  
   
 #### Persist Greengrass Runtime Logs outside the Greengrass Docker Container  
-You can run the AWS IoT Greengrass Docker container after bind-mounting the `/greengrass/v2/logs` directory to persist logs even after the container has exited or is removed. Alternatively, you can omit the `--rm` flag and use `docker cp` to copy the logs back from the container after it exits.  
+You can run the AWS IoT Greengrass Docker container after bind-mounting the logs directory to persist logs even after the container has exited or is removed. For the full image, mount `/greengrass/v2/logs`. For the lite image, mount `/greengrass/logs`; systemd unit logs are written under `/greengrass/logs/systemd/<service>/service.log`. Alternatively, you can omit the `--rm` flag and use `docker cp` to copy the logs back from the container after it exits.  
   
   
 #### Attach an Interactive Shell to the Greengrass Docker Container  

@@ -71,8 +71,8 @@ done
 
 # Per-unit log dirs must exist before systemd starts a unit (StandardOutput=append
 # is set up before ExecStartPre). Writable mount — not :ro.
-mkdir -p /greengrass/v2/logs/systemd
-chmod 755 /greengrass/v2/logs/systemd
+mkdir -p /greengrass/logs/systemd
+chmod 755 /greengrass/logs/systemd
 for unitfile in /lib/systemd/system/ggl*.service /lib/systemd/system/ggl-*.service; do
 	[ -f "$unitfile" ] || continue
 	/usr/local/bin/ggl-ensure-unit-log-dir "$(basename "$unitfile")"

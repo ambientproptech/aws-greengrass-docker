@@ -1,5 +1,5 @@
 #!/bin/sh
-# Per-unit file logging under /greengrass/v2/logs/systemd/<unit>/service.log
+# Per-unit file logging under /greengrass/logs/systemd/<unit>/service.log
 #
 # Dot-named units (ggl.core.iotcored, ggl.com.example.HelloLite) do not inherit
 # ggl-.service.d dash-prefix drop-ins; install an explicit drop-in per unit.
@@ -22,7 +22,7 @@ esac
 /usr/local/bin/ggl-ensure-unit-log-dir "$unit"
 
 base=${unit%.service}
-logdir="/greengrass/v2/logs/systemd/${base}"
+logdir="/greengrass/logs/systemd/${base}"
 dropdir="/etc/systemd/system/${unit}.d"
 mkdir -p "$dropdir"
 cat >"$dropdir/10-logging.conf" <<EOF

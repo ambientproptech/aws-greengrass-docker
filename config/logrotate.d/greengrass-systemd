@@ -1,4 +1,4 @@
-/greengrass/v2/logs/systemd/*/service.log {
+/greengrass/logs/systemd/*/service.log {
     daily
     rotate 14
     compress
