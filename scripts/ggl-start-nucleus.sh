@@ -1,6 +1,6 @@
 #!/bin/sh
 # Runtime nucleus bootstrap: core units pre-enabled at image build; component units
-# reconciled from persisted rootPath before greengrass-lite.target starts.
+# reconciled from persisted unitPath before greengrass-lite.target starts.
 
 set -e
 

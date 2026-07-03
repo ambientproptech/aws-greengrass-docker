@@ -51,14 +51,14 @@ if [ -d /greengrass/certs ]; then
 	fi
 fi
 
-if [ -d /var/lib/greengrass ]; then
-	if chown -R ggcore:ggcore /var/lib/greengrass 2>/dev/null; then
-		echo "Set ggcore ownership on /var/lib/greengrass (config.db and runtime state)"
-	fi
+_root="${GGC_ROOT_PATH:-/greengrass/systemd/units}"
+mkdir -p "$_root"
+if chown -R ggcore:ggcore "$_root" 2>/dev/null; then
+	echo "Set ggcore ownership on $_root (config.db and runtime state)"
 fi
 
 # Ensure Lite work dirs exist under bind mounts (recipes/packages/work only if not fully chowned above).
-for gg_root in /var/lib/greengrass /greengrass/; do
+for gg_root in "$_root"; do
 	[ -d "$gg_root" ] || continue
 	for sub in recipes packages work; do
 		mkdir -p "$gg_root/$sub"
@@ -77,7 +77,6 @@ for unitfile in /lib/systemd/system/ggl*.service /lib/systemd/system/ggl-*.servi
 	[ -f "$unitfile" ] || continue
 	/usr/local/bin/ggl-ensure-unit-log-dir "$(basename "$unitfile")"
 done
-_root="${GGC_ROOT_PATH:-/var/lib/greengrass}"
 if [ -d "$_root" ]; then
 	for unitfile in "$_root"/ggl.*.service; do
 		[ -f "$unitfile" ] || continue
