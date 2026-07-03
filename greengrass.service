@@ -5,11 +5,11 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-PIDFile=/greengrass/v2/alts/loader.pid
+PIDFile=/greengrass/alts/loader.pid
 RemainAfterExit=no
 Restart=on-failure
 RestartSec=10
-ExecStart=/bin/sh /greengrass/v2/alts/current/distro/bin/loader
+ExecStart=/bin/sh /greengrass/alts/current/distro/bin/loader
 
 [Install]
 WantedBy=multi-user.target
