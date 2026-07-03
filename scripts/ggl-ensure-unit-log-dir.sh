@@ -1,5 +1,5 @@
 #!/bin/sh
-# Create /greengrass/v2/logs/systemd/<unit>/ before systemd opens StandardOutput paths.
+# Create /greengrass/logs/systemd/<unit>/ before systemd opens StandardOutput paths.
 # Directories must exist before the unit starts; ExecStartPre runs too late.
 
 set -e
@@ -18,6 +18,6 @@ ggl.*|ggl-*|greengrass.service) ;;
 esac
 
 base=${unit%.service}
-logdir="/greengrass/v2/logs/systemd/${base}"
+logdir="/greengrass/logs/systemd/${base}"
 mkdir -p "$logdir"
 chmod 755 "$logdir"
