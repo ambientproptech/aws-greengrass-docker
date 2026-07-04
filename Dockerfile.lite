@@ -71,7 +71,7 @@ LABEL gg.podman.doc="https://github.com/aws-greengrass/aws-greengrass-lite/blob/
 LABEL org.opencontainers.image.description="Greengrass lite image (nucleus lite + IoT SDK / boto3)"
 
 ENV TINI_KILL_PROCESS_GROUP=1 \
-    GGC_ROOT_PATH=/var/lib/greengrass \
+    GGC_ROOT_PATH=/greengrass/systemd \
     GG_NUCLEUS_RUNTIME=lite \
     INIT_CONFIG=/greengrass/config/config.yaml
 
@@ -110,16 +110,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
        done
 
 RUN groupadd -r ggcore \
-    && useradd -r -g ggcore -d /var/lib/greengrass ggcore \
+    && useradd -r -g ggcore -d /greengrass/systemd ggcore \
     && groupadd -r gg_component \
     && useradd -r -g gg_component gg_component \
-    && mkdir -p /var/lib/greengrass/credentials /etc/greengrass/config.d \
-    && chown -R ggcore:ggcore /var/lib/greengrass
+    && mkdir -p /greengrass/systemd/credentials /etc/greengrass/config.d \
+    && chown -R ggcore:ggcore /greengrass/systemd
 
 COPY --from=build /install/usr/bin/ /usr/bin/
 COPY --from=build /install/lib/systemd/system/ /lib/systemd/system/
+RUN sed -i \
+      -e 's#ListenStream=/var/lib/greengrass/gg-ipc.socket#ListenStream=/greengrass/systemd/gg-ipc.socket#' \
+      -e 's#WorkingDirectory=/var/lib/greengrass#WorkingDirectory=/greengrass/systemd#' \
+      /lib/systemd/system/ggl.gg-ipc.socket.socket \
+      /lib/systemd/system/ggl.core.ggipcd.service
 COPY --from=build /install/usr/lib/tmpfiles.d/ /usr/lib/tmpfiles.d/
 COPY --from=build /src/misc/container/01defaults.yaml /etc/greengrass/config.d/01defaults.yaml
+RUN sed -i 's#rootPath: "/var/lib/greengrass"#rootPath: "/greengrass/systemd"#' \
+    /etc/greengrass/config.d/01defaults.yaml
 COPY scripts/ggl-start-nucleus.sh /usr/local/bin/ggl-start-nucleus
 COPY scripts/ggl-reconcile-component-units.sh /usr/local/bin/ggl-reconcile-component-units
 COPY scripts/ggl-ensure-unit-log-dir.sh /usr/local/bin/ggl-ensure-unit-log-dir

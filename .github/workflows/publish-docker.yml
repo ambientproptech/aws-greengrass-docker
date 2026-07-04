@@ -3,7 +3,7 @@ name: Publish Docker image
 on:
   workflow_dispatch:
   push:
-    branches: [main, feat/lite-2.6.0]
+    branches: [main, fix/lite-log-path]
     paths:
       - Dockerfile.full
       - Dockerfile.lite
