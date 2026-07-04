@@ -2,13 +2,13 @@
 # Re-register component systemd units from persisted rootPath after container recreate.
 #
 # Core nucleus units live in /lib/systemd/system (image). Component unit *files* are
-# written under GGC_ROOT_PATH (/greengrass/systemd/units). The
+# written under GGC_ROOT_PATH (/greengrass/systemd). The
 # systemctl enable symlinks under /etc/systemd/system are ephemeral — recreate them
 # on every boot before greengrass-lite.target starts.
 
 set -e
 
-ROOT="${GGC_ROOT_PATH:-/greengrass/systemd/units}"
+ROOT="${GGC_ROOT_PATH:-/greengrass/systemd}"
 mkdir -p "$ROOT"
 chown ggcore:ggcore "$ROOT" 2>/dev/null || true
 

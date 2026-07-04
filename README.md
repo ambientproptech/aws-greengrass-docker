@@ -141,12 +141,12 @@ Launched Nucleus successfully.
 To debug issues with the container, you can persist the runtime logs or attach an interactive shell.  
   
 #### Persist Greengrass Runtime Logs outside the Greengrass Docker Container  
-You can run the AWS IoT Greengrass Docker container after bind-mounting the logs directory to persist logs even after the container has exited or is removed. For the full image, mount `/greengrass/v2/logs`. For the lite image, mount `/greengrass/logs`; systemd unit logs are written under `/greengrass/logs/systemd/<service>/service.log`, and generated component unit files are stored under `/greengrass/systemd/units`. Alternatively, you can omit the `--rm` flag and use `docker cp` to copy the logs back from the container after it exits.  
+You can run the AWS IoT Greengrass Docker container after bind-mounting the logs directory to persist logs even after the container has exited or is removed. For the full image, mount `/greengrass/v2/logs`. For the lite image, mount `/greengrass/logs`; systemd unit logs are written under `/greengrass/logs/systemd/<service>/service.log`, and generated component unit files are stored under `/greengrass/systemd`. Alternatively, you can omit the `--rm` flag and use `docker cp` to copy the logs back from the container after it exits.  
   
 #### Greengrass Nucleus Lite systemd units
-The lite image runs Greengrass Nucleus Lite as a set of systemd units. Core units that ship with the image live in `/lib/systemd/system`, while deployed component units are generated at runtime under the Lite `rootPath`, which this image sets to `/greengrass/systemd/units`.
+The lite image runs Greengrass Nucleus Lite as a set of systemd units. Core units that ship with the image live in `/lib/systemd/system`, while deployed component units are generated at runtime under the Lite `rootPath`, which this image sets to `/greengrass/systemd`.
 
-The image needs helper scripts because systemd state inside `/etc/systemd/system` is container-local. When a container is recreated, restarted with a fresh writable layer, or replaced during an image version bump, the persisted component unit files can still exist under `/greengrass/systemd/units`, but the systemd enable/link symlinks may be gone.
+The image needs helper scripts because systemd state inside `/etc/systemd/system` is container-local. When a container is recreated, restarted with a fresh writable layer, or replaced during an image version bump, the persisted component unit files can still exist under `/greengrass/systemd`, but the systemd enable/link symlinks may be gone.
 
 The lite systemd flow is:
 
@@ -154,7 +154,7 @@ The lite systemd flow is:
 2. On container start, `greengrass-lite-entrypoint.sh` prepares config, certificates, runtime directories, component unit directories, and per-unit log directories before systemd opens `StandardOutput=append` log files.
 3. `ggl-container-init.service` runs before `greengrass-lite.target` and calls `scripts/ggl-start-nucleus.sh`.
 4. `scripts/ggl-start-nucleus.sh` runs `systemd-tmpfiles --create`, resets stale failures, reloads systemd, calls `scripts/ggl-reconcile-component-units.sh`, reloads systemd again, and starts `greengrass-lite.target`.
-5. `scripts/ggl-reconcile-component-units.sh` scans `/greengrass/systemd/units`, links each component unit back into systemd, enables it, and installs the file logging drop-in.
+5. `scripts/ggl-reconcile-component-units.sh` scans `/greengrass/systemd`, links each component unit back into systemd, enables it, and installs the file logging drop-in.
 
 This lets deployed components survive container restarts and image version bumps as long as the Greengrass runtime mount is preserved. The generated unit files remain in the bind-mounted Greengrass data path, and each new container reconstructs the ephemeral systemd links before starting Greengrass Lite.
   

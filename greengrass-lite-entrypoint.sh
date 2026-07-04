@@ -51,7 +51,7 @@ if [ -d /greengrass/certs ]; then
 	fi
 fi
 
-_root="${GGC_ROOT_PATH:-/greengrass/systemd/units}"
+_root="${GGC_ROOT_PATH:-/greengrass/systemd}"
 mkdir -p "$_root"
 if chown -R ggcore:ggcore "$_root" 2>/dev/null; then
 	echo "Set ggcore ownership on $_root (config.db and runtime state)"
